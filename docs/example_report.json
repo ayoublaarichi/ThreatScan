@@ -1,0 +1,188 @@
+{
+  "file": {
+    "sha256": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "sha1": "da39a3ee5e6b4b0d3255bfef95601890afd80709",
+    "md5": "d41d8cd98f00b204e9800998ecf8427e",
+    "file_name": "suspicious_document.exe",
+    "file_size": 245760,
+    "mime_type": "application/x-dosexec",
+    "magic_description": "PE32 executable (GUI) Intel 80386, for MS Windows",
+    "entropy": 7.2341,
+    "upload_count": 3,
+    "first_seen": "2026-03-01T10:30:00Z",
+    "last_seen": "2026-03-04T14:22:00Z"
+  },
+  "score": 75,
+  "verdict": "malicious",
+  "summary": "This file is classified as MALICIOUS with a score of 75/100. Matched 2 YARA rule(s): Suspicious_Process_Injection, Suspicious_PowerShell_Download. Found 12 indicator(s) of compromise.",
+  "pe_info": {
+    "machine": "0x14c",
+    "number_of_sections": 5,
+    "timestamp": 1709312400,
+    "characteristics": "0x102",
+    "entry_point": "0x1a4f0",
+    "image_base": "0x400000",
+    "sections": [
+      {
+        "name": ".text",
+        "virtual_size": 131072,
+        "raw_size": 131072,
+        "entropy": 6.8234,
+        "characteristics": "0x60000020"
+      },
+      {
+        "name": ".rdata",
+        "virtual_size": 45056,
+        "raw_size": 45056,
+        "entropy": 5.1023,
+        "characteristics": "0x40000040"
+      },
+      {
+        "name": ".data",
+        "virtual_size": 8192,
+        "raw_size": 4096,
+        "entropy": 3.4567,
+        "characteristics": "0xc0000040"
+      },
+      {
+        "name": ".rsrc",
+        "virtual_size": 4096,
+        "raw_size": 4096,
+        "entropy": 2.1234,
+        "characteristics": "0x40000040"
+      },
+      {
+        "name": ".packed",
+        "virtual_size": 57344,
+        "raw_size": 57344,
+        "entropy": 7.8901,
+        "characteristics": "0xe0000040"
+      }
+    ],
+    "imports": {
+      "kernel32.dll": [
+        "VirtualAlloc",
+        "VirtualProtect",
+        "WriteProcessMemory",
+        "CreateRemoteThread",
+        "GetModuleHandle",
+        "LoadLibrary"
+      ],
+      "user32.dll": [
+        "MessageBox",
+        "GetForegroundWindow"
+      ],
+      "ws2_32.dll": [
+        "WSAStartup",
+        "socket",
+        "connect",
+        "send",
+        "recv"
+      ]
+    },
+    "exports": []
+  },
+  "scoring_details": {
+    "yara_rules": [
+      "Suspicious_Process_Injection (critical) +30",
+      "Suspicious_PowerShell_Download (high) +25"
+    ],
+    "ioc_hits": [
+      "High IOC count: 12 indicators (+20)"
+    ],
+    "suspicious_strings": [],
+    "entropy_score": [],
+    "pe_analysis": [
+      "High entropy section '.packed': 7.8901 (+5)"
+    ]
+  },
+  "yara_matches": [
+    {
+      "rule_name": "Suspicious_Process_Injection",
+      "rule_namespace": "malware_core",
+      "rule_tags": ["critical"],
+      "severity": "critical",
+      "description": "Detects process injection API patterns",
+      "matched_strings": [
+        {
+          "offset": 4520,
+          "identifier": "$api1",
+          "data": "5669727475616c416c6c6f634578"
+        },
+        {
+          "offset": 4582,
+          "identifier": "$api2",
+          "data": "577269746550726f636573734d656d6f7279"
+        }
+      ],
+      "score_contribution": 30
+    },
+    {
+      "rule_name": "Suspicious_PowerShell_Download",
+      "rule_namespace": "malware_core",
+      "rule_tags": ["high"],
+      "severity": "high",
+      "description": "Detects PowerShell download cradles",
+      "matched_strings": [
+        {
+          "offset": 8192,
+          "identifier": "$ps5",
+          "data": "4e65742e576562436c69656e74"
+        }
+      ],
+      "score_contribution": 25
+    }
+  ],
+  "indicators": [
+    {
+      "indicator_type": "domain",
+      "value": "malware-c2.example.com",
+      "reputation": "malicious",
+      "context": "extracted_from_strings",
+      "sample_count": 5,
+      "first_seen": "2026-02-15T08:00:00Z",
+      "last_seen": "2026-03-04T14:22:00Z"
+    },
+    {
+      "indicator_type": "ip",
+      "value": "185.123.45.67",
+      "reputation": "suspicious",
+      "context": "extracted_from_strings",
+      "sample_count": 3,
+      "first_seen": "2026-02-20T12:00:00Z",
+      "last_seen": "2026-03-04T14:22:00Z"
+    },
+    {
+      "indicator_type": "url",
+      "value": "https://malware-c2.example.com/payload.bin",
+      "reputation": "malicious",
+      "context": "extracted_from_strings",
+      "sample_count": 2,
+      "first_seen": "2026-03-01T10:30:00Z",
+      "last_seen": "2026-03-04T14:22:00Z"
+    }
+  ],
+  "tags": [
+    {
+      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "name": "trojan",
+      "color": "#ef4444"
+    },
+    {
+      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "name": "process-injection",
+      "color": "#f59e0b"
+    }
+  ],
+  "comments": [
+    {
+      "id": "c3d4e5f6-a7b8-9012-cdef-123456789012",
+      "content": "This sample was found in a phishing campaign targeting finance sector.",
+      "author_name": "analyst1",
+      "created_at": "2026-03-02T09:15:00Z"
+    }
+  ],
+  "analysis_duration_ms": 3420,
+  "created_at": "2026-03-01T10:31:00Z",
+  "updated_at": "2026-03-04T14:22:30Z"
+}
