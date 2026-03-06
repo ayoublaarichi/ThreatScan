@@ -12,6 +12,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Updated `.env.example` defaults for production sharing (`NEXT_PUBLIC_API_URL` placeholder and Vercel origin in `CORS_ORIGINS`).
 - Added `render.yaml` blueprint for deploying API, worker, beat, PostgreSQL, Redis, and MinIO on Render.
 - Added `frontend/vercel.json` and an exact Vercel settings checklist (root directory, env scopes, redeploy validation).
+- Fixed Render blueprint schema by removing invalid `startCommand` from Docker-runtime services and adding `backend/Dockerfile.beat` for the beat worker.
 
 ## [0.1.0] - 2026-03-01
 

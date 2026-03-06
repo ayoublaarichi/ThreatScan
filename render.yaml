@@ -61,7 +61,6 @@ services:
         value: "30"
       - key: MAX_UPLOAD_SIZE_MB
         value: "50"
-    startCommand: bash -lc "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${API_WORKERS:-2}"
 
   - type: worker
     name: threatscan-worker
@@ -116,13 +115,12 @@ services:
         value: https://threatscan-nine.vercel.app
       - key: ADMIN_PASSWORD
         sync: false
-    startCommand: celery -A app.worker.celery_app worker -Q analysis --loglevel=info --concurrency=2 --max-tasks-per-child=50
 
   - type: worker
     name: threatscan-beat
     runtime: docker
     dockerContext: ./backend
-    dockerfilePath: ./backend/Dockerfile.worker
+    dockerfilePath: ./backend/Dockerfile.beat
     autoDeploy: true
     envVars:
       - key: ENVIRONMENT
@@ -171,7 +169,6 @@ services:
         value: https://threatscan-nine.vercel.app
       - key: ADMIN_PASSWORD
         sync: false
-    startCommand: celery -A app.worker.celery_app beat --loglevel=info
 
   - type: pserv
     name: threatscan-redis

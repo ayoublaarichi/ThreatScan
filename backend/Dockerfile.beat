@@ -1,0 +1,29 @@
+# ── Celery Beat Dockerfile ──
+FROM python:3.11-slim AS base
+
+# Security: run as non-root
+RUN groupadd -r threatscan && useradd -r -g threatscan -d /app -s /sbin/nologin threatscan
+
+WORKDIR /app
+
+# System dependencies for analysis libraries
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libmagic1 \
+    yara \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
+
+# Copy application code
+COPY . .
+
+# Create temp directory for analysis
+RUN mkdir -p /app/temp && chown -R threatscan:threatscan /app
+
+USER threatscan
+
+CMD ["celery", "-A", "app.worker.celery_app", "beat", "--loglevel=info"]
