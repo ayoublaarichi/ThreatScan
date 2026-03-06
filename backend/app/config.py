@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     max_upload_size_mb: int = 50
     rate_limit_per_minute: int = 30
     cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
+    admin_password: str = ""
 
     # ── Celery ──
     celery_broker_url: str = "redis://localhost:6379/0"

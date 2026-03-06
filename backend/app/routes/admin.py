@@ -4,11 +4,14 @@ ThreatScan — Admin endpoints.
 Protected routes for managing jobs and samples.
 """
 
-from fastapi import APIRouter, Depends, HTTPException, status
+import secrets
+
+from fastapi import APIRouter, Depends, Header, HTTPException, status
 from sqlalchemy import delete, select, func
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
+from app.config import get_settings
 from app.database import get_db
 from app.logging import get_logger
 from app.models.file import File as FileModel
@@ -18,6 +21,24 @@ from app.services.storage import storage_service
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/admin", tags=["admin"])
+
+
+def require_admin_password(
+    x_admin_password: str | None = Header(default=None, alias="X-Admin-Password"),
+) -> None:
+    settings = get_settings()
+
+    if not settings.admin_password:
+        raise HTTPException(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            detail="Admin password is not configured",
+        )
+
+    if not x_admin_password or not secrets.compare_digest(x_admin_password, settings.admin_password):
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid admin password",
+        )
 
 
 @router.get(
@@ -30,6 +51,7 @@ async def list_jobs(
     limit: int = 50,
     offset: int = 0,
     db: AsyncSession = Depends(get_db),
+    _admin_auth: None = Depends(require_admin_password),
 ) -> AdminJobsResponse:
     """List all scan jobs with optional status filtering."""
     query = select(ScanJob).options(selectinload(ScanJob.file)).order_by(ScanJob.created_at.desc())
@@ -74,6 +96,7 @@ async def list_jobs(
 async def delete_sample(
     sha256: str,
     db: AsyncSession = Depends(get_db),
+    _admin_auth: None = Depends(require_admin_password),
 ) -> DeleteResponse:
     """Delete a file sample, its report, and all associated data."""
     result = await db.execute(

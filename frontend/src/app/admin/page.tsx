@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import Link from "next/link";
 import {
   Settings,
@@ -27,29 +27,78 @@ interface JobItem {
 export default function AdminPage() {
   const [jobs, setJobs] = useState<JobItem[]>([]);
   const [total, setTotal] = useState(0);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [filter, setFilter] = useState<string>("");
+  const [adminPassword, setAdminPassword] = useState("");
+  const [passwordInput, setPasswordInput] = useState("");
+  const [authError, setAuthError] = useState<string | null>(null);
 
-  const loadJobs = async () => {
+  const loadJobs = useCallback(async () => {
+    if (!adminPassword) return;
+
     setLoading(true);
     try {
       const url = filter
         ? `${API_URL}/admin/jobs?status_filter=${filter}&limit=50`
         : `${API_URL}/admin/jobs?limit=50`;
-      const res = await fetch(url);
+
+      const res = await fetch(url, {
+        headers: {
+          "X-Admin-Password": adminPassword,
+        },
+      });
+
+      if (res.status === 401) {
+        setAuthError("Invalid admin password");
+        localStorage.removeItem("threatscan_admin_password");
+        setAdminPassword("");
+        return;
+      }
+
+      if (!res.ok) {
+        throw new Error("Failed to load admin jobs");
+      }
+
       const data = await res.json();
       setJobs(data.jobs || []);
       setTotal(data.total || 0);
+      setAuthError(null);
     } catch {
       /* ignore */
     } finally {
       setLoading(false);
     }
+  }, [adminPassword, filter]);
+
+  const handleUnlock = () => {
+    if (!passwordInput.trim()) return;
+
+    localStorage.setItem("threatscan_admin_password", passwordInput);
+    setAdminPassword(passwordInput);
+    setAuthError(null);
+  };
+
+  const handleLogout = () => {
+    localStorage.removeItem("threatscan_admin_password");
+    setAdminPassword("");
+    setPasswordInput("");
+    setJobs([]);
+    setTotal(0);
   };
 
   useEffect(() => {
-    loadJobs();
-  }, [filter]);
+    const savedPassword = localStorage.getItem("threatscan_admin_password");
+    if (savedPassword) {
+      setAdminPassword(savedPassword);
+      setPasswordInput(savedPassword);
+    }
+  }, []);
+
+  useEffect(() => {
+    if (adminPassword) {
+      loadJobs();
+    }
+  }, [adminPassword, loadJobs]);
 
   const statusIcon = (status: string) => {
     switch (status) {
@@ -64,6 +113,40 @@ export default function AdminPage() {
     }
   };
 
+  if (!adminPassword) {
+    return (
+      <div className="mx-auto max-w-md px-4 py-20 sm:px-6 lg:px-8">
+        <div className="rounded-xl border border-gray-800 bg-gray-900/40 p-6">
+          <h1 className="text-lg font-semibold text-white">Admin Access</h1>
+          <p className="mt-2 text-sm text-gray-400">
+            Enter the admin password to continue.
+          </p>
+          <input
+            type="password"
+            value={passwordInput}
+            onChange={(event) => setPasswordInput(event.target.value)}
+            onKeyDown={(event) => {
+              if (event.key === "Enter") {
+                handleUnlock();
+              }
+            }}
+            className="mt-4 w-full rounded-lg border border-gray-700 bg-gray-950 px-3 py-2 text-sm text-gray-200 outline-none focus:border-brand-500"
+            placeholder="Admin password"
+          />
+          <button
+            onClick={handleUnlock}
+            className="mt-3 w-full rounded-lg bg-brand-600 px-4 py-2 text-sm font-medium text-white hover:bg-brand-500"
+          >
+            Unlock Admin
+          </button>
+          {authError && (
+            <p className="mt-3 text-xs text-red-400">{authError}</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="mx-auto max-w-6xl px-4 py-12 sm:px-6 lg:px-8">
       <div className="flex items-center justify-between mb-8">
@@ -76,14 +159,27 @@ export default function AdminPage() {
             {total} total jobs
           </p>
         </div>
-        <button
-          onClick={loadJobs}
-          className="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
-        >
-          <RefreshCw className="h-4 w-4" />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={loadJobs}
+            className="flex items-center gap-2 rounded-lg bg-gray-800 px-4 py-2 text-sm text-gray-300 hover:bg-gray-700"
+          >
+            <RefreshCw className="h-4 w-4" />
+            Refresh
+          </button>
+          <button
+            onClick={handleLogout}
+            className="rounded-lg border border-gray-700 px-4 py-2 text-sm text-gray-300 hover:bg-gray-800"
+          >
+            Lock
+          </button>
+        </div>
       </div>
+      {authError && (
+        <div className="mb-4 rounded-lg border border-red-900/50 bg-red-950/20 px-3 py-2 text-xs text-red-300">
+          {authError}
+        </div>
+      )}
 
       {/* Filters */}
       <div className="flex gap-2 mb-6">
