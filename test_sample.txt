@@ -1,0 +1,1 @@
+This is a test file for malware scanning. It contains some suspicious strings like HKEY_LOCAL_MACHINE and cmd.exe to trigger IOC detection.
