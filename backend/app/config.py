@@ -48,6 +48,7 @@ class Settings(BaseSettings):
     api_workers: int = 4
     max_upload_size_mb: int = 50
     rate_limit_per_minute: int = 30
+    cors_origins: str = "http://localhost:3000,http://127.0.0.1:3000"
 
     # ── Celery ──
     celery_broker_url: str = "redis://localhost:6379/0"
@@ -77,6 +78,10 @@ class Settings(BaseSettings):
     @property
     def hosts_list(self) -> List[str]:
         return [h.strip() for h in self.allowed_hosts.split(",")]
+
+    @property
+    def cors_origins_list(self) -> List[str]:
+        return [o.strip() for o in self.cors_origins.split(",") if o.strip()]
 
 
 @lru_cache()
