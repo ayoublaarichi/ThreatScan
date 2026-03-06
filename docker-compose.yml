@@ -114,6 +114,7 @@ services:
     container_name: threatscan-worker
     restart: unless-stopped
     env_file: .env
+    command: celery -A app.worker.celery_app worker -Q analysis --loglevel=info --concurrency=4 --max-tasks-per-child=50
     depends_on:
       postgres:
         condition: service_healthy

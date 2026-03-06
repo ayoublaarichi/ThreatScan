@@ -4,6 +4,8 @@ ThreatScan — Upload endpoint.
 Handles file upload, validation, deduplication, and job creation.
 """
 
+from datetime import datetime, timezone
+
 from fastapi import APIRouter, Depends, File, HTTPException, Request, UploadFile, status
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -79,7 +81,7 @@ async def upload_file(
     if existing_file:
         # Increment upload count, return existing report link
         existing_file.upload_count += 1
-        existing_file.last_seen = None  # triggers onupdate=func.now()
+        existing_file.last_seen = datetime.now(timezone.utc)
 
         # Check if there's already a pending/processing job
         job_result = await db.execute(
@@ -126,6 +128,7 @@ async def upload_file(
         )
         db.add(file_record)
         await db.flush()
+        await db.commit()
     else:
         file_record = existing_file
 
@@ -137,6 +140,7 @@ async def upload_file(
     )
     db.add(scan_job)
     await db.flush()
+    await db.commit()
 
     # 9. Dispatch to Celery worker
     run_analysis_pipeline.delay(str(scan_job.id), str(file_record.id), sha256)

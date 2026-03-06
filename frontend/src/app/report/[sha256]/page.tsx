@@ -363,6 +363,9 @@ function OverviewTab({ report }: { report: ReportResponse }) {
 
 function DetailsTab({ report }: { report: ReportResponse }) {
   const { pe_info, elf_info, analysis_duration_ms } = report;
+  const peSections = Array.isArray(pe_info?.sections)
+    ? (pe_info.sections as Array<Record<string, unknown>>)
+    : [];
 
   return (
     <div className="space-y-6">
@@ -384,7 +387,7 @@ function DetailsTab({ report }: { report: ReportResponse }) {
             <InfoRow label="Image Base" value={String(pe_info.image_base)} />
           </dl>
 
-          {pe_info.sections && (
+          {peSections.length > 0 && (
             <div className="mt-4">
               <h4 className="text-xs font-medium text-gray-500 uppercase mb-2">
                 Sections
@@ -400,8 +403,7 @@ function DetailsTab({ report }: { report: ReportResponse }) {
                     </tr>
                   </thead>
                   <tbody>
-                    {(pe_info.sections as Array<Record<string, unknown>>).map(
-                      (section, i) => (
+                    {peSections.map((section, i) => (
                         <tr key={i} className="border-b border-gray-800/50">
                           <td className="py-2 pr-4 font-mono text-gray-300">
                             {String(section.name)}
@@ -416,8 +418,7 @@ function DetailsTab({ report }: { report: ReportResponse }) {
                             {String(section.entropy)}
                           </td>
                         </tr>
-                      )
-                    )}
+                      ))}
                   </tbody>
                 </table>
               </div>

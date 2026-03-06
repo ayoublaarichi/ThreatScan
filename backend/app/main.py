@@ -5,6 +5,7 @@ Production-grade malware analysis and threat intelligence platform.
 """
 
 from contextlib import asynccontextmanager
+from typing import cast
 
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
@@ -26,6 +27,10 @@ logger = get_logger(__name__)
 
 # ── Rate Limiter ──
 limiter = Limiter(key_func=get_remote_address)
+
+
+def rate_limit_exception_handler(request: Request, exc: Exception):
+    return _rate_limit_exceeded_handler(request, cast(RateLimitExceeded, exc))
 
 
 # ── Lifespan ──
@@ -51,7 +56,7 @@ app = FastAPI(
 
 # ── Middleware ──
 app.state.limiter = limiter
-app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
+app.add_exception_handler(RateLimitExceeded, rate_limit_exception_handler)
 
 app.add_middleware(
     CORSMiddleware,

@@ -5,7 +5,7 @@ ThreatScan test configuration and shared fixtures.
 import asyncio
 import os
 import uuid
-from typing import AsyncGenerator, Generator
+from typing import Any, AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
@@ -32,9 +32,11 @@ os.environ.setdefault("MINIO_ACCESS_KEY", "minioadmin")
 os.environ.setdefault("MINIO_SECRET_KEY", "minioadmin")
 os.environ.setdefault("MINIO_BUCKET", "threatscan-test")
 
-from app.config import settings
+from app.config import get_settings
 from app.database import Base, get_db
 from app.main import app
+
+settings = get_settings()
 
 
 # ─── Event loop ─────────────────────────────────────────────
@@ -86,7 +88,7 @@ async def client(db_session: AsyncSession) -> AsyncGenerator[AsyncClient, None]:
 
     app.dependency_overrides[get_db] = override_get_db
 
-    transport = ASGITransport(app=app)
+    transport = ASGITransport(app=app)  # type: ignore[arg-type]
     async with AsyncClient(transport=transport, base_url="http://test") as ac:
         yield ac
 

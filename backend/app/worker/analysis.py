@@ -304,13 +304,26 @@ def analyze_pe(data: bytes) -> dict[str, Any] | None:
         import pefile
 
         pe = pefile.PE(data=data)
+        file_header = getattr(pe, "FILE_HEADER", None)
+        optional_header = getattr(pe, "OPTIONAL_HEADER", None)
+        if file_header is None or optional_header is None:
+            pe.close()
+            return None
+
+        machine = getattr(file_header, "Machine", 0)
+        number_of_sections = getattr(file_header, "NumberOfSections", 0)
+        timestamp = getattr(file_header, "TimeDateStamp", 0)
+        characteristics = getattr(file_header, "Characteristics", 0)
+        entry_point = getattr(optional_header, "AddressOfEntryPoint", 0)
+        image_base = getattr(optional_header, "ImageBase", 0)
+
         info: dict[str, Any] = {
-            "machine": hex(pe.FILE_HEADER.Machine),
-            "number_of_sections": pe.FILE_HEADER.NumberOfSections,
-            "timestamp": pe.FILE_HEADER.TimeDateStamp,
-            "characteristics": hex(pe.FILE_HEADER.Characteristics),
-            "entry_point": hex(pe.OPTIONAL_HEADER.AddressOfEntryPoint),
-            "image_base": hex(pe.OPTIONAL_HEADER.ImageBase),
+            "machine": hex(machine),
+            "number_of_sections": number_of_sections,
+            "timestamp": timestamp,
+            "characteristics": hex(characteristics),
+            "entry_point": hex(entry_point),
+            "image_base": hex(image_base),
         }
 
         # Sections
@@ -327,8 +340,9 @@ def analyze_pe(data: bytes) -> dict[str, Any] | None:
 
         # Imports
         imports = {}
-        if hasattr(pe, "DIRECTORY_ENTRY_IMPORT"):
-            for entry in pe.DIRECTORY_ENTRY_IMPORT:
+        import_entries = getattr(pe, "DIRECTORY_ENTRY_IMPORT", [])
+        if import_entries:
+            for entry in import_entries:
                 dll_name = entry.dll.decode("utf-8", errors="replace")
                 functions = []
                 for imp in entry.imports:
@@ -339,8 +353,9 @@ def analyze_pe(data: bytes) -> dict[str, Any] | None:
 
         # Exports
         exports = []
-        if hasattr(pe, "DIRECTORY_ENTRY_EXPORT"):
-            for exp in pe.DIRECTORY_ENTRY_EXPORT.symbols:
+        export_dir = getattr(pe, "DIRECTORY_ENTRY_EXPORT", None)
+        if export_dir and getattr(export_dir, "symbols", None):
+            for exp in export_dir.symbols:
                 if exp.name:
                     exports.append(exp.name.decode("utf-8", errors="replace"))
         info["exports"] = exports
