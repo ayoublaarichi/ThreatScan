@@ -7,6 +7,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+### Changed
+- Added public deployment guidance for Vercel + backend stack to prevent frontend `Failed to fetch` caused by localhost API URLs.
+- Updated `.env.example` defaults for production sharing (`NEXT_PUBLIC_API_URL` placeholder and Vercel origin in `CORS_ORIGINS`).
+- Added `render.yaml` blueprint for deploying API, worker, beat, PostgreSQL, Redis, and MinIO on Render.
+- Added `frontend/vercel.json` and an exact Vercel settings checklist (root directory, env scopes, redeploy validation).
+
 ## [0.1.0] - 2026-03-01
 
 ### Added

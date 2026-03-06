@@ -1,0 +1,209 @@
+services:
+  - type: web
+    name: threatscan-api
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile
+    autoDeploy: true
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        generateValue: true
+      - key: ALLOWED_HOSTS
+        value: "*"
+      - key: API_WORKERS
+        value: "2"
+      - key: CORS_ORIGINS
+        value: https://threatscan-nine.vercel.app
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: threatscan-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: threatscan-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: threatscan-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: threatscan-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: threatscan-db
+          property: password
+      - key: REDIS_URL
+        value: redis://threatscan-redis:6379/0
+      - key: CELERY_BROKER_URL
+        value: redis://threatscan-redis:6379/0
+      - key: CELERY_RESULT_BACKEND
+        value: redis://threatscan-redis:6379/1
+      - key: MINIO_ENDPOINT
+        value: threatscan-minio:9000
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        value: minioadmin_secret_change_me
+      - key: MINIO_BUCKET
+        value: threatscan-files
+      - key: MINIO_USE_SSL
+        value: "false"
+      - key: ADMIN_PASSWORD
+        generateValue: true
+      - key: RATE_LIMIT_PER_MINUTE
+        value: "30"
+      - key: MAX_UPLOAD_SIZE_MB
+        value: "50"
+    startCommand: bash -lc "alembic upgrade head && uvicorn app.main:app --host 0.0.0.0 --port $PORT --workers ${API_WORKERS:-2}"
+
+  - type: worker
+    name: threatscan-worker
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile.worker
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        sync: false
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: threatscan-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: threatscan-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: threatscan-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: threatscan-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: threatscan-db
+          property: password
+      - key: REDIS_URL
+        value: redis://threatscan-redis:6379/0
+      - key: CELERY_BROKER_URL
+        value: redis://threatscan-redis:6379/0
+      - key: CELERY_RESULT_BACKEND
+        value: redis://threatscan-redis:6379/1
+      - key: MINIO_ENDPOINT
+        value: threatscan-minio:9000
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        value: minioadmin_secret_change_me
+      - key: MINIO_BUCKET
+        value: threatscan-files
+      - key: MINIO_USE_SSL
+        value: "false"
+      - key: CORS_ORIGINS
+        value: https://threatscan-nine.vercel.app
+      - key: ADMIN_PASSWORD
+        sync: false
+    startCommand: celery -A app.worker.celery_app worker -Q analysis --loglevel=info --concurrency=2 --max-tasks-per-child=50
+
+  - type: worker
+    name: threatscan-beat
+    runtime: docker
+    dockerContext: ./backend
+    dockerfilePath: ./backend/Dockerfile.worker
+    autoDeploy: true
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: DEBUG
+        value: "false"
+      - key: SECRET_KEY
+        sync: false
+      - key: POSTGRES_HOST
+        fromDatabase:
+          name: threatscan-db
+          property: host
+      - key: POSTGRES_PORT
+        fromDatabase:
+          name: threatscan-db
+          property: port
+      - key: POSTGRES_DB
+        fromDatabase:
+          name: threatscan-db
+          property: database
+      - key: POSTGRES_USER
+        fromDatabase:
+          name: threatscan-db
+          property: user
+      - key: POSTGRES_PASSWORD
+        fromDatabase:
+          name: threatscan-db
+          property: password
+      - key: REDIS_URL
+        value: redis://threatscan-redis:6379/0
+      - key: CELERY_BROKER_URL
+        value: redis://threatscan-redis:6379/0
+      - key: CELERY_RESULT_BACKEND
+        value: redis://threatscan-redis:6379/1
+      - key: MINIO_ENDPOINT
+        value: threatscan-minio:9000
+      - key: MINIO_ACCESS_KEY
+        value: minioadmin
+      - key: MINIO_SECRET_KEY
+        value: minioadmin_secret_change_me
+      - key: MINIO_BUCKET
+        value: threatscan-files
+      - key: MINIO_USE_SSL
+        value: "false"
+      - key: CORS_ORIGINS
+        value: https://threatscan-nine.vercel.app
+      - key: ADMIN_PASSWORD
+        sync: false
+    startCommand: celery -A app.worker.celery_app beat --loglevel=info
+
+  - type: pserv
+    name: threatscan-redis
+    runtime: image
+    image:
+      url: redis:7-alpine
+    autoDeploy: false
+    disk:
+      name: threatscan-redis-data
+      mountPath: /data
+      sizeGB: 1
+    startCommand: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+
+  - type: pserv
+    name: threatscan-minio
+    runtime: image
+    image:
+      url: minio/minio:latest
+    autoDeploy: false
+    disk:
+      name: threatscan-minio-data
+      mountPath: /data
+      sizeGB: 5
+    envVars:
+      - key: MINIO_ROOT_USER
+        value: minioadmin
+      - key: MINIO_ROOT_PASSWORD
+        value: minioadmin_secret_change_me
+    startCommand: minio server /data --console-address :9001
+
+databases:
+  - name: threatscan-db
+    databaseName: threatscan
+    user: threatscan
+    plan: free
